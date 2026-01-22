@@ -9,36 +9,113 @@
             margin: 0; 
             padding: 0; 
             overflow: hidden; 
-            background: #87CEEB; /* Himmelblau falls Bild fehlt */
+            background: #87CEEB; 
             touch-action: none; 
             font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif; 
         }
         canvas { display: block; }
+        
+        /* UI für Punkte oben */
         #ui {
             position: absolute;
-            top: 20px;
+            top: 15px;
             width: 100%;
-            text-align: center;
-            font-size: clamp(24px, 5vw, 40px); /* Passt sich der Handygröße an */
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+            font-size: clamp(20px, 4vw, 30px);
             font-weight: bold;
             color: #ff69b4; 
-            text-shadow: 2px 2px 0px #fff, -2px -2px 0px #fff, 2px -2px 0px #fff, -2px 2px 0px #fff;
+            text-shadow: 2px 2px 0px #fff;
             pointer-events: none;
             z-index: 10;
         }
+
+        /* Der Start- und Gewonnen-Bildschirm */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: clamp(40px, 8vw, 70px);
+            color: #ff1493;
+            margin: 0;
+            text-shadow: 3px 3px 0px #fff, 5px 5px 0px rgba(0,0,0,0.1);
+            animation: bounce 1s infinite alternate;
+        }
+
+        p {
+            font-size: 24px;
+            color: #333;
+            margin: 20px;
+        }
+
+        button {
+            background: #ff69b4;
+            color: white;
+            border: 4px solid #fff;
+            padding: 15px 40px;
+            font-size: 30px;
+            border-radius: 50px;
+            font-family: inherit;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+        button:active { transform: scale(0.95); }
+
+        /* Kleine Animation für den Text */
+        @keyframes bounce {
+            from { transform: scale(1); }
+            to { transform: scale(1.1); }
+        }
+
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <div id="ui">Nüsse für Ella: <span id="score">0</span></div>
+    <div id="ui">
+        <div>Punkte: <span id="score">0</span></div>
+        <div>Rekord: <span id="highscore">0</span></div>
+    </div>
+
+    <div id="startScreen" class="overlay">
+        <h1>Hallo Ella!</h1>
+        <p>Hilf dem Eichhörnchen Nüsse zu sammeln.</p>
+        <button onclick="startGame()">Starten ▶</button>
+    </div>
+
+    <div id="winScreen" class="overlay hidden">
+        <h1>GEWONNEN!</h1>
+        <p>Du bist super!</p>
+        <p>Deine Punkte: <span id="finalScore">0</span></p>
+        <button onclick="restartGame()">Nochmal spielen ↺</button>
+    </div>
+
     <canvas id="gameCanvas"></canvas>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const scoreElement = document.getElementById('score');
+        const highscoreElement = document.getElementById('highscore');
+        const winScreen = document.getElementById('winScreen');
+        const startScreen = document.getElementById('startScreen');
 
-        // BILDER LADEN (Jetzt mit einfachen Namen!)
+        // BILDER LADEN
         const imgWald = new Image(); imgWald.src = 'wald.png';
         const imgEich = new Image(); imgEich.src = 'eich.png';
         const imgNuss = new Image(); imgNuss.src = 'nuss.png';
@@ -51,45 +128,74 @@
         window.addEventListener('resize', resize);
         resize();
 
+        // SPIEL VARIABLEN
         let score = 0;
-        // Startposition etwas höher setzen, damit es nicht im Boden steckt
-        let squirrel = {
-            x: canvas.width / 2,
-            y: 0,
-            w: 100, 
-            h: 100,
-            targetX: canvas.width / 2
-        };
+        let highscore = localStorage.getItem('ella_highscore') || 0;
+        let gameRunning = false;
+        let winScore = 100; // Ziel: 100 Punkte zum Gewinnen
 
+        highscoreElement.innerText = highscore;
+
+        let squirrel = { x: canvas.width / 2, y: 0, w: 100, h: 100, targetX: canvas.width / 2 };
         let items = [];
 
-        // Steuerung (Maus + Touch)
+        // STEUERUNG
         const handleMove = (e) => {
-            // Verhindert Standard-Verhalten (Scrollen etc.)
-            // e.preventDefault(); 
+            if (!gameRunning) return;
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             squirrel.targetX = clientX;
         };
-        
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('touchmove', handleMove, {passive: false});
         window.addEventListener('touchstart', handleMove, {passive: false});
 
+        function startGame() {
+            startScreen.classList.add('hidden');
+            winScreen.classList.add('hidden');
+            score = 0;
+            scoreElement.innerText = score;
+            items = [];
+            gameRunning = true;
+            playTone(400, "sine"); // Start-Ton
+            loop();
+        }
+
+        function restartGame() {
+            startGame();
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            winScreen.classList.remove('hidden');
+            document.getElementById('finalScore').innerText = score;
+            playTone(600, "triangle"); // Gewonnen-Ton
+            
+            // Highscore speichern
+            if (score > highscore) {
+                highscore = score;
+                localStorage.setItem('ella_highscore', highscore);
+                highscoreElement.innerText = highscore;
+            }
+        }
+
         function spawnItem() {
-            const isKrone = Math.random() < 0.2; 
+            if (!gameRunning) return;
+            const isKrone = Math.random() < 0.25; // Etwas mehr Kronen (25%)
             items.push({
                 x: Math.random() * (canvas.width - 60),
                 y: -100,
                 type: isKrone ? 'krone' : 'nuss',
-                speed: (3 + Math.random() * 4) * (canvas.height / 800), // Tempo an Bildschirmhöhe anpassen
-                size: isKrone ? 70 : 60
+                // VIEL LANGSAMER: Speed zwischen 1.5 und 3.5 (angepasst an Bildschirmhöhe)
+                speed: (1.5 + Math.random() * 2) * (canvas.height / 800), 
+                size: isKrone ? 80 : 70
             });
         }
 
         function update() {
-            // Eichhörnchen immer unten positionieren (relativ zur Höhe)
-            squirrel.y = canvas.height - 140; 
-            squirrel.x += (squirrel.targetX - squirrel.x) * 0.15; 
+            if (!gameRunning) return;
+
+            squirrel.y = canvas.height - 140;
+            squirrel.x += (squirrel.targetX - squirrel.x) * 0.1;
 
             for (let i = items.length - 1; i >= 0; i--) {
                 let it = items[i];
@@ -100,63 +206,70 @@
                     it.x < squirrel.x + squirrel.w/2 &&
                     it.x + it.size > squirrel.x - squirrel.w/2) {
                     
-                    score += (it.type === 'krone' ? 5 : 1);
+                    // NEUE PUNKTE: 20 für Krone, 5 für Nuss
+                    score += (it.type === 'krone' ? 20 : 5);
                     scoreElement.innerText = score;
                     items.splice(i, 1);
-                    playSimpleTone();
+                    playTone(it.type === 'krone' ? 800 : 500, "sine"); // Hoher Ton für Krone
+
+                    // GEWONNEN PRÜFEN
+                    if (score >= winScore) {
+                        gameOver();
+                    }
+
                 } else if (it.y > canvas.height) {
                     items.splice(i, 1);
                 }
             }
-            if (Math.random() < 0.02) spawnItem();
+
+            // Weniger Items spawnen (langsamerer Rhythmus)
+            if (Math.random() < 0.015) spawnItem();
         }
 
-        function draw() {
-            // 1. Hintergrund
+        function loop() {
+            if (!gameRunning) return; // Stoppt die Schleife wenn Spiel vorbei
+
+            // Zeichnen
             if (imgWald.complete && imgWald.naturalWidth !== 0) {
                 ctx.drawImage(imgWald, 0, 0, canvas.width, canvas.height);
             } else {
-                // Fallback, falls Bild noch lädt
-                ctx.fillStyle = "#87CEEB"; 
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "#87CEEB"; ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
 
-            // 2. Items
             items.forEach(it => {
                 const img = it.type === 'krone' ? imgKrone : imgNuss;
                 if (img.complete) ctx.drawImage(img, it.x, it.y, it.size, it.size);
             });
 
-            // 3. Eichhörnchen
             if (imgEich.complete) {
                 ctx.drawImage(imgEich, squirrel.x - squirrel.w/2, squirrel.y, squirrel.w, squirrel.h);
             }
 
             update();
-            requestAnimationFrame(draw);
+            requestAnimationFrame(loop);
         }
 
-        function playSimpleTone() {
-            // Töne funktionieren erst nach der ersten Interaktion (Klick/Touch) des Nutzers
+        // Einmaliges Zeichnen für den Startbildschirm-Hintergrund
+        function drawStaticBackground() {
+            if (imgWald.complete) ctx.drawImage(imgWald, 0, 0, canvas.width, canvas.height);
+            requestAnimationFrame(drawStaticBackground);
+        }
+        drawStaticBackground(); // Damit man den Wald hinter dem Startmenü sieht
+
+        // Einfacher Sound
+        function playTone(freq, type) {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(500, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
                 gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.1);
-            } catch(e) {
-                // Fehler ignorieren, falls Audio noch nicht erlaubt ist
-            }
+                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+            } catch(e) {}
         }
-
-        draw();
     </script>
 </body>
 </html>
