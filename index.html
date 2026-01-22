@@ -5,16 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ellas Eichhörnchen-Abenteuer</title>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background: #87CEEB; touch-action: none; font-family: 'Comic Sans MS', sans-serif; }
-        canvas { display: block; cursor: none; }
+        body { 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            background: #87CEEB; /* Himmelblau falls Bild fehlt */
+            touch-action: none; 
+            font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif; 
+        }
+        canvas { display: block; }
         #ui {
             position: absolute;
             top: 20px;
             width: 100%;
             text-align: center;
-            font-size: clamp(24px, 5vw, 40px);
+            font-size: clamp(24px, 5vw, 40px); /* Passt sich der Handygröße an */
             font-weight: bold;
-            color: #ff69b4; /* Pink für Ella */
+            color: #ff69b4; 
             text-shadow: 2px 2px 0px #fff, -2px -2px 0px #fff, 2px -2px 0px #fff, -2px 2px 0px #fff;
             pointer-events: none;
             z-index: 10;
@@ -31,11 +38,11 @@
         const ctx = canvas.getContext('2d');
         const scoreElement = document.getElementById('score');
 
-        // BILDER LADEN
+        // BILDER LADEN (Jetzt mit einfachen Namen!)
         const imgWald = new Image(); imgWald.src = 'wald.png';
-        const imgEich = new Image(); imgEich.src = 'eichhörnchen-removebg-preview.png';
-        const imgNuss = new Image(); imgNuss.src = 'haselnuss-removebg-preview.png';
-        const imgKrone = new Image(); imgKrone.src = 'krone pink.png';
+        const imgEich = new Image(); imgEich.src = 'eich.png';
+        const imgNuss = new Image(); imgNuss.src = 'nuss.png';
+        const imgKrone = new Image(); imgKrone.src = 'krone.png';
 
         function resize() {
             canvas.width = window.innerWidth;
@@ -45,39 +52,44 @@
         resize();
 
         let score = 0;
+        // Startposition etwas höher setzen, damit es nicht im Boden steckt
         let squirrel = {
             x: canvas.width / 2,
             y: 0,
-            w: 120, // Größe angepasst
-            h: 120,
+            w: 100, 
+            h: 100,
             targetX: canvas.width / 2
         };
 
         let items = [];
 
-        // Steuerung
+        // Steuerung (Maus + Touch)
         const handleMove = (e) => {
+            // Verhindert Standard-Verhalten (Scrollen etc.)
+            // e.preventDefault(); 
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             squirrel.targetX = clientX;
         };
+        
         window.addEventListener('mousemove', handleMove);
-        window.addEventListener('touchmove', handleMove);
-        window.addEventListener('touchstart', handleMove);
+        window.addEventListener('touchmove', handleMove, {passive: false});
+        window.addEventListener('touchstart', handleMove, {passive: false});
 
         function spawnItem() {
-            const isKrone = Math.random() < 0.2; // 20% Chance auf eine Krone
+            const isKrone = Math.random() < 0.2; 
             items.push({
                 x: Math.random() * (canvas.width - 60),
                 y: -100,
                 type: isKrone ? 'krone' : 'nuss',
-                speed: 3 + Math.random() * 4,
+                speed: (3 + Math.random() * 4) * (canvas.height / 800), // Tempo an Bildschirmhöhe anpassen
                 size: isKrone ? 70 : 60
             });
         }
 
         function update() {
-            squirrel.y = canvas.height - 150; // Immer am unteren Rand
-            squirrel.x += (squirrel.targetX - squirrel.x) * 0.15; // Weiche Bewegung
+            // Eichhörnchen immer unten positionieren (relativ zur Höhe)
+            squirrel.y = canvas.height - 140; 
+            squirrel.x += (squirrel.targetX - squirrel.x) * 0.15; 
 
             for (let i = items.length - 1; i >= 0; i--) {
                 let it = items[i];
@@ -91,8 +103,6 @@
                     score += (it.type === 'krone' ? 5 : 1);
                     scoreElement.innerText = score;
                     items.splice(i, 1);
-                    
-                    // Ein kleiner Sound-Trick ohne externe Datei
                     playSimpleTone();
                 } else if (it.y > canvas.height) {
                     items.splice(i, 1);
@@ -103,35 +113,47 @@
 
         function draw() {
             // 1. Hintergrund
-            ctx.drawImage(imgWald, 0, 0, canvas.width, canvas.height);
+            if (imgWald.complete && imgWald.naturalWidth !== 0) {
+                ctx.drawImage(imgWald, 0, 0, canvas.width, canvas.height);
+            } else {
+                // Fallback, falls Bild noch lädt
+                ctx.fillStyle = "#87CEEB"; 
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
 
             // 2. Items
             items.forEach(it => {
                 const img = it.type === 'krone' ? imgKrone : imgNuss;
-                ctx.drawImage(img, it.x, it.y, it.size, it.size);
+                if (img.complete) ctx.drawImage(img, it.x, it.y, it.size, it.size);
             });
 
-            // 3. Ella's Eichhörnchen
-            ctx.drawImage(imgEich, squirrel.x - squirrel.w/2, squirrel.y, squirrel.w, squirrel.h);
+            // 3. Eichhörnchen
+            if (imgEich.complete) {
+                ctx.drawImage(imgEich, squirrel.x - squirrel.w/2, squirrel.y, squirrel.w, squirrel.h);
+            }
 
             update();
             requestAnimationFrame(draw);
         }
 
-        // Einfacher Soundeffekt (Web Audio API)
         function playSimpleTone() {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(500, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.1);
+            // Töne funktionieren erst nach der ersten Interaktion (Klick/Touch) des Nutzers
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            } catch(e) {
+                // Fehler ignorieren, falls Audio noch nicht erlaubt ist
+            }
         }
 
         draw();
