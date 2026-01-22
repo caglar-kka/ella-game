@@ -11,62 +11,54 @@
         }
         canvas { display: block; }
         
-        /* UI für Punkte und Rekord - Tiefer gesetzt für Handys */
         #ui {
-            position: absolute; 
-            top: 50px; /* Tiefer gesetzt (war 15px) */
-            width: 100%;
+            position: absolute; top: 50px; width: 100%;
             display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box;
             font-size: clamp(20px, 4vw, 30px); font-weight: bold; color: #ff69b4; 
             text-shadow: 2px 2px 0px #fff; pointer-events: none; z-index: 10;
         }
 
-        /* Der Rote Stopp-Knopf - Tiefer gesetzt */
         #stopButton {
-            position: absolute;
-            top: 50px; /* Tiefer gesetzt (war 15px) */
-            right: 20px; 
+            position: absolute; top: 50px; right: 20px; 
             background: #ff4444; color: white; border: 3px solid white; border-radius: 50%;
             width: 50px; height: 50px; font-size: 25px; font-weight: bold; cursor: pointer;
             box-shadow: 0 4px 8px rgba(0,0,0,0.3); z-index: 100;
             display: none; align-items: center; justify-content: center; font-family: sans-serif;
         }
-        #stopButton:active { transform: scale(0.9); background: #cc0000; }
 
         .overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.92); 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 20; text-align: center;
-            padding: 20px; box-sizing: border-box; /* Damit Text auf Handy nicht am Rand klebt */
+            z-index: 20; text-align: center; padding: 20px; box-sizing: border-box;
         }
-
         h1 {
-            font-size: clamp(35px, 8vw, 70px); color: #ff1493; margin: 0;
+            font-size: clamp(35px, 8vw, 60px); color: #ff1493; margin: 0;
             text-shadow: 3px 3px 0px #fff; animation: bounce 1s infinite alternate;
         }
-
-        p { font-size: 20px; color: #333; margin: 15px; }
+        p { font-size: 20px; color: #333; margin: 10px; }
+        
+        #startImage {
+            width: 180px; height: 180px; object-fit: cover; 
+            border-radius: 50%; border: 6px solid #ff69b4; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); margin: 15px 0;
+            background-color: #ddd; 
+        }
 
         button.menu-btn {
             background: #ff69b4; color: white; border: 4px solid #fff;
             padding: 15px 30px; font-size: 24px; border-radius: 50px;
             font-family: inherit; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            transition: transform 0.1s;
-            margin-top: 10px;
+            transition: transform 0.1s; margin-top: 10px;
         }
         button.menu-btn:active { transform: scale(0.95); }
-
         @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.1); } }
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <audio id="bgMusic" loop>
-        <source src="musik.mp3" type="audio/mpeg">
-    </audio>
-
+    <audio id="bgMusic" loop><source src="musik.mp3" type="audio/mpeg"></audio>
     <button id="stopButton" onclick="stopGame()">X</button>
 
     <div id="ui">
@@ -76,7 +68,8 @@
 
     <div id="startScreen" class="overlay">
         <h1>Hallo Ella!</h1>
-        <p>Fang die Nüsse & Kronen!</p>
+        <img id="startImage" src="ella.jpg" alt="Ella" onerror="this.style.display='none'">
+        <p>Fang die Nüsse & Dayi!</p>
         <button class="menu-btn" onclick="startGame()">Los geht's ▶</button>
     </div>
 
@@ -101,10 +94,12 @@
         const stopBtn = document.getElementById('stopButton');
         const music = document.getElementById('bgMusic');
 
+        // BILDER LADEN
         const imgWald = new Image(); imgWald.src = 'wald.png';
         const imgEich = new Image(); imgEich.src = 'eich.png';
         const imgNuss = new Image(); imgNuss.src = 'nuss.png';
         const imgKrone = new Image(); imgKrone.src = 'krone.png';
+        const imgDayi = new Image(); imgDayi.src = 'dayi.jpg'; 
 
         function resize() {
             canvas.width = window.innerWidth;
@@ -117,17 +112,16 @@
         let highscore = localStorage.getItem('ella_highscore') || 0;
         let gameRunning = false;
         let nextMilestone = 100; 
+        let showHeart = false;
+        let heartTimer = 0;
 
         highscoreEl.innerText = highscore;
 
-        let squirrel = { 
-            x: canvas.width / 2, y: 0, w: 150, h: 150, targetX: canvas.width / 2 
-        };
+        let squirrel = { x: canvas.width / 2, y: 0, w: 150, h: 150, targetX: canvas.width / 2 };
         let items = [];
 
         const handleMove = (e) => {
             if (!gameRunning) return;
-            // e.preventDefault(); // Falls Scrollen stört, Kommentar entfernen
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             squirrel.targetX = clientX;
         };
@@ -139,17 +133,14 @@
             startScreen.classList.add('hidden');
             milestoneScreen.classList.add('hidden');
             stopBtn.style.display = "flex";
-            
             score = 0;
             nextMilestone = 100;
             scoreEl.innerText = score;
             items = [];
             gameRunning = true;
-            
-            music.currentTime = 0;
-            music.volume = 0.4;
+            showHeart = false;
+            music.currentTime = 0; music.volume = 0.4;
             music.play().catch(e => console.log("Audio braucht User-Interaktion"));
-            
             loop();
         }
 
@@ -159,7 +150,6 @@
             milestoneScreen.classList.add('hidden');
             startScreen.classList.remove('hidden');
             music.pause();
-            music.currentTime = 0;
         }
 
         function showMilestone() {
@@ -167,7 +157,7 @@
             milestoneText.innerText = score;
             milestoneScreen.classList.remove('hidden');
             stopBtn.style.display = "none";
-            playTone(600, "triangle"); playTone(800, "sine");
+            playTone(600, "triangle", 0.3); playTone(800, "sine", 0.3);
         }
 
         function continueGame() {
@@ -180,30 +170,37 @@
 
         function spawnItem() {
             if (!gameRunning) return;
-            const isKrone = Math.random() < 0.25;
+            const rand = Math.random();
+            let type, size;
+
+            // WAHRSCHEINLICHKEITEN
+            // Jetzt nur noch 5% Chance für Dayi (0.05) - also sehr selten!
+            if (rand < 0.05) { 
+                type = 'dayi'; 
+                size = 100; // GRÖSSER (war 70, jetzt 100)
+            } 
+            else if (rand < 0.30) { type = 'krone'; size = 80; } 
+            else { type = 'nuss'; size = 70; }
+
             items.push({
                 x: Math.random() * (canvas.width - 60),
                 y: -100,
-                type: isKrone ? 'krone' : 'nuss',
-                
-                // *** HIER IST DIE GESCHWINDIGKEIT ***
-                // Vorher: 1.5 + Random... Jetzt: 0.8 (Viel langsamer!)
-                speed: (0.8 + Math.random() * 1.5) * (canvas.height / 800), 
-                
-                size: isKrone ? 80 : 70
+                type: type,
+                speed: (1.2 + Math.random() * 1.5) * (canvas.height / 800), 
+                size: size
             });
         }
 
         function update() {
             if (!gameRunning) return;
-
-            // *** SICHERHEITSABSTAND VOM BODEN ***
-            // Wir ziehen 20% der Bildschirmhöhe ab, damit es über der Menüleiste schwebt
-            // Mindestens aber 180 Pixel
             const safeBottom = Math.max(180, canvas.height * 0.2);
             squirrel.y = canvas.height - safeBottom; 
-            
             squirrel.x += (squirrel.targetX - squirrel.x) * 0.1;
+
+            if (showHeart) {
+                heartTimer--;
+                if(heartTimer <= 0) showHeart = false;
+            }
 
             for (let i = items.length - 1; i >= 0; i--) {
                 let it = items[i];
@@ -213,17 +210,27 @@
                     it.x < squirrel.x + squirrel.w/2 &&
                     it.x + it.size > squirrel.x - squirrel.w/2) {
                     
-                    score += (it.type === 'krone' ? 20 : 5);
+                    if (it.type === 'dayi') {
+                        score += 50; 
+                        playTone(1000, "sine", 0.5); 
+                        showHeart = true;
+                        heartTimer = 80; 
+                    } else if (it.type === 'krone') {
+                        score += 20;
+                        playTone(800, "sine", 0.2);
+                    } else {
+                        score += 5;
+                        playTone(500, "sine", 0.1);
+                    }
+
                     scoreEl.innerText = score;
                     items.splice(i, 1);
-                    playTone(it.type === 'krone' ? 800 : 500, "sine");
 
                     if (score > highscore) {
                         highscore = score;
                         localStorage.setItem('ella_highscore', highscore);
                         highscoreEl.innerText = highscore;
                     }
-
                     if (score >= nextMilestone) showMilestone();
 
                 } else if (it.y > canvas.height) {
@@ -233,26 +240,76 @@
             if (Math.random() < 0.015) spawnItem();
         }
 
+        function drawHeart() {
+             ctx.font = "120px Arial";
+             ctx.textAlign = "center";
+             ctx.fillText("❤️", squirrel.x, squirrel.y - 60);
+             ctx.fillStyle = "white";
+             ctx.font = "bold 40px Arial";
+             ctx.fillText("+50", squirrel.x, squirrel.y - 100);
+        }
+
         function loop() {
             if (!gameRunning) return;
 
-            if (imgWald.complete && imgWald.naturalWidth !== 0) {
-                // drawImage(bild, x, y, breite, höhe)
-                ctx.drawImage(imgWald, 0, 0, canvas.width, canvas.height);
-            } else {
-                ctx.fillStyle = "#87CEEB"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            try {
+                if (imgWald.complete && imgWald.naturalWidth > 0) {
+                    ctx.drawImage(imgWald, 0, 0, canvas.width, canvas.height);
+                } else {
+                    ctx.fillStyle = "#87CEEB"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+
+                items.forEach(it => {
+                    let img;
+                    if (it.type === 'krone') img = imgKrone;
+                    else if (it.type === 'dayi') {
+                        img = imgDayi;
+                        if (img.complete && img.naturalWidth > 0) {
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.arc(it.x + it.size/2, it.y + it.size/2, it.size/2, 0, Math.PI*2);
+                            ctx.closePath();
+                            ctx.lineWidth = 3; 
+                            ctx.strokeStyle = "white";
+                            ctx.stroke();
+                            ctx.clip();
+                            ctx.drawImage(img, it.x, it.y, it.size, it.size);
+                            ctx.restore();
+                        } else {
+                            ctx.fillStyle = "purple";
+                            ctx.beginPath();
+                            ctx.arc(it.x + it.size/2, it.y + it.size/2, it.size/2, 0, Math.PI*2);
+                            ctx.fill();
+                            ctx.fillStyle = "white";
+                            ctx.font = "bold 30px Arial";
+                            ctx.textAlign = "center";
+                            ctx.fillText("D", it.x + it.size/2, it.y + it.size/2 + 10);
+                        }
+                        return; 
+                    }
+                    else img = imgNuss;
+
+                    if (img.complete && img.naturalWidth > 0) {
+                        ctx.drawImage(img, it.x, it.y, it.size, it.size);
+                    } else {
+                        ctx.fillStyle = "#8B4513";
+                        ctx.beginPath();
+                        ctx.arc(it.x + it.size/2, it.y + it.size/2, it.size/2, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+                });
+
+                if (imgEich.complete && imgEich.naturalWidth > 0) {
+                    ctx.drawImage(imgEich, squirrel.x - squirrel.w/2, squirrel.y, squirrel.w, squirrel.h);
+                }
+
+                if (showHeart) drawHeart();
+
+                update();
+            } catch (error) {
+                requestAnimationFrame(loop);
+                return;
             }
-
-            items.forEach(it => {
-                const img = it.type === 'krone' ? imgKrone : imgNuss;
-                if (img.complete) ctx.drawImage(img, it.x, it.y, it.size, it.size);
-            });
-
-            if (imgEich.complete) {
-                ctx.drawImage(imgEich, squirrel.x - squirrel.w/2, squirrel.y, squirrel.w, squirrel.h);
-            }
-
-            update();
             requestAnimationFrame(loop);
         }
         
@@ -262,7 +319,7 @@
         }
         drawStatic();
 
-        function playTone(freq, type) {
+        function playTone(freq, type, duration) {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = audioCtx.createOscillator();
@@ -271,8 +328,8 @@
                 osc.type = type;
                 osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
                 gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                osc.start(); osc.stop(audioCtx.currentTime + duration + 0.05);
             } catch(e) {}
         }
     </script>
