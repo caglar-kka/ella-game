@@ -6,103 +6,94 @@
     <title>Ellas Eichhörnchen-Abenteuer</title>
     <style>
         body { 
-            margin: 0; 
-            padding: 0; 
-            overflow: hidden; 
-            background: #87CEEB; 
-            touch-action: none; 
+            margin: 0; padding: 0; overflow: hidden; background: #87CEEB; touch-action: none; 
             font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif; 
         }
         canvas { display: block; }
         
-        /* UI für Punkte oben */
+        /* UI für Punkte und Rekord */
         #ui {
-            position: absolute;
-            top: 15px;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 20px;
-            box-sizing: border-box;
-            font-size: clamp(20px, 4vw, 30px);
-            font-weight: bold;
-            color: #ff69b4; 
-            text-shadow: 2px 2px 0px #fff;
-            pointer-events: none;
-            z-index: 10;
+            position: absolute; top: 15px; width: 100%;
+            display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box;
+            font-size: clamp(20px, 4vw, 30px); font-weight: bold; color: #ff69b4; 
+            text-shadow: 2px 2px 0px #fff; pointer-events: none; z-index: 10;
         }
 
-        /* Der Start- und Gewonnen-Bildschirm */
-        .overlay {
+        /* Der Rote Stopp-Knopf (oben rechts) */
+        #stopButton {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.85);
-            display: flex;
-            flex-direction: column;
+            top: 15px;
+            right: 20px; /* Rechts neben dem Rekord, oder darunter wenn Platz eng ist */
+            background: #ff4444;
+            color: white;
+            border: 3px solid white;
+            border-radius: 50%; /* Macht ihn rund */
+            width: 50px;
+            height: 50px;
+            font-size: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            z-index: 100;
+            display: none; /* Erstmal versteckt */
             align-items: center;
             justify-content: center;
-            z-index: 20;
-            text-align: center;
+            font-family: sans-serif;
+        }
+        #stopButton:active { transform: scale(0.9); background: #cc0000; }
+
+        /* Overlays (Start, Pause, Gewonnen) */
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 20; text-align: center;
         }
 
         h1 {
-            font-size: clamp(40px, 8vw, 70px);
-            color: #ff1493;
-            margin: 0;
-            text-shadow: 3px 3px 0px #fff, 5px 5px 0px rgba(0,0,0,0.1);
-            animation: bounce 1s infinite alternate;
+            font-size: clamp(40px, 8vw, 70px); color: #ff1493; margin: 0;
+            text-shadow: 3px 3px 0px #fff; animation: bounce 1s infinite alternate;
         }
 
-        p {
-            font-size: 24px;
-            color: #333;
-            margin: 20px;
-        }
+        p { font-size: 24px; color: #333; margin: 20px; }
 
-        button {
-            background: #ff69b4;
-            color: white;
-            border: 4px solid #fff;
-            padding: 15px 40px;
-            font-size: 30px;
-            border-radius: 50px;
-            font-family: inherit;
-            cursor: pointer;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        button.menu-btn {
+            background: #ff69b4; color: white; border: 4px solid #fff;
+            padding: 15px 40px; font-size: 30px; border-radius: 50px;
+            font-family: inherit; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             transition: transform 0.1s;
         }
-        button:active { transform: scale(0.95); }
+        button.menu-btn:active { transform: scale(0.95); }
 
-        /* Kleine Animation für den Text */
-        @keyframes bounce {
-            from { transform: scale(1); }
-            to { transform: scale(1.1); }
-        }
-
+        @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.1); } }
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
+    <audio id="bgMusic" loop>
+        <source src="musik.mp3" type="audio/mpeg">
+    </audio>
+
+    <button id="stopButton" onclick="stopGame()">X</button>
+
     <div id="ui">
         <div>Punkte: <span id="score">0</span></div>
-        <div>Rekord: <span id="highscore">0</span></div>
-    </div>
+        <div style="margin-right: 60px;">Rekord: <span id="highscore">0</span></div> 
+        </div>
 
     <div id="startScreen" class="overlay">
         <h1>Hallo Ella!</h1>
-        <p>Hilf dem Eichhörnchen Nüsse zu sammeln.</p>
-        <button onclick="startGame()">Starten ▶</button>
+        <p>Fang die Nüsse & Kronen!</p>
+        <button class="menu-btn" onclick="startGame()">Los geht's ▶</button>
     </div>
 
-    <div id="winScreen" class="overlay hidden">
-        <h1>GEWONNEN!</h1>
-        <p>Du bist super!</p>
-        <p>Deine Punkte: <span id="finalScore">0</span></p>
-        <button onclick="restartGame()">Nochmal spielen ↺</button>
+    <div id="milestoneScreen" class="overlay hidden">
+        <h1>SUPER!</h1>
+        <p><span id="milestoneScore">100</span> Punkte erreicht!</p>
+        <button class="menu-btn" onclick="continueGame()">Weiter spielen ↺</button>
+        <br><br>
+        <button class="menu-btn" style="background:#ff4444; font-size:20px; padding:10px 30px;" onclick="stopGame()">Beenden</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -110,10 +101,13 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const scoreElement = document.getElementById('score');
-        const highscoreElement = document.getElementById('highscore');
-        const winScreen = document.getElementById('winScreen');
+        const scoreEl = document.getElementById('score');
+        const highscoreEl = document.getElementById('highscore');
+        const milestoneScreen = document.getElementById('milestoneScreen');
+        const milestoneText = document.getElementById('milestoneScore');
         const startScreen = document.getElementById('startScreen');
+        const stopBtn = document.getElementById('stopButton');
+        const music = document.getElementById('bgMusic');
 
         // BILDER LADEN
         const imgWald = new Image(); imgWald.src = 'wald.png';
@@ -132,11 +126,13 @@
         let score = 0;
         let highscore = localStorage.getItem('ella_highscore') || 0;
         let gameRunning = false;
-        let winScore = 100; // Ziel: 100 Punkte zum Gewinnen
+        let nextMilestone = 100; 
 
-        highscoreElement.innerText = highscore;
+        highscoreEl.innerText = highscore;
 
-        let squirrel = { x: canvas.width / 2, y: 0, w: 100, h: 100, targetX: canvas.width / 2 };
+        let squirrel = { 
+            x: canvas.width / 2, y: 0, w: 150, h: 150, targetX: canvas.width / 2 
+        };
         let items = [];
 
         // STEUERUNG
@@ -151,41 +147,59 @@
 
         function startGame() {
             startScreen.classList.add('hidden');
-            winScreen.classList.add('hidden');
+            milestoneScreen.classList.add('hidden');
+            stopBtn.style.display = "flex"; // X-Knopf anzeigen
+            
             score = 0;
-            scoreElement.innerText = score;
+            nextMilestone = 100;
+            scoreEl.innerText = score;
             items = [];
             gameRunning = true;
-            playTone(400, "sine"); // Start-Ton
+            
+            // Musik an
+            music.currentTime = 0;
+            music.volume = 0.4;
+            music.play().catch(e => console.log("Audio braucht User-Interaktion"));
+            
             loop();
         }
 
-        function restartGame() {
-            startGame();
+        function stopGame() {
+            gameRunning = false;
+            stopBtn.style.display = "none"; // X-Knopf verstecken
+            milestoneScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden'); // Zurück zum Start
+            
+            // Musik aus
+            music.pause();
+            music.currentTime = 0;
         }
 
-        function gameOver() {
-            gameRunning = false;
-            winScreen.classList.remove('hidden');
-            document.getElementById('finalScore').innerText = score;
-            playTone(600, "triangle"); // Gewonnen-Ton
+        function showMilestone() {
+            gameRunning = false; 
+            milestoneText.innerText = score;
+            milestoneScreen.classList.remove('hidden');
+            stopBtn.style.display = "none"; // X-Knopf kurz weg, dafür Menü
             
-            // Highscore speichern
-            if (score > highscore) {
-                highscore = score;
-                localStorage.setItem('ella_highscore', highscore);
-                highscoreElement.innerText = highscore;
-            }
+            playTone(600, "triangle"); 
+            playTone(800, "sine");
+        }
+
+        function continueGame() {
+            milestoneScreen.classList.add('hidden');
+            stopBtn.style.display = "flex"; // X-Knopf wieder da
+            gameRunning = true;
+            nextMilestone += 100; 
+            loop();
         }
 
         function spawnItem() {
             if (!gameRunning) return;
-            const isKrone = Math.random() < 0.25; // Etwas mehr Kronen (25%)
+            const isKrone = Math.random() < 0.25;
             items.push({
                 x: Math.random() * (canvas.width - 60),
                 y: -100,
                 type: isKrone ? 'krone' : 'nuss',
-                // VIEL LANGSAMER: Speed zwischen 1.5 und 3.5 (angepasst an Bildschirmhöhe)
                 speed: (1.5 + Math.random() * 2) * (canvas.height / 800), 
                 size: isKrone ? 80 : 70
             });
@@ -194,42 +208,40 @@
         function update() {
             if (!gameRunning) return;
 
-            squirrel.y = canvas.height - 140;
+            squirrel.y = canvas.height - 160; 
             squirrel.x += (squirrel.targetX - squirrel.x) * 0.1;
 
             for (let i = items.length - 1; i >= 0; i--) {
                 let it = items[i];
                 it.y += it.speed;
 
-                // Kollision
-                if (it.y + it.size > squirrel.y + 20 &&
+                if (it.y + it.size > squirrel.y + 30 &&
                     it.x < squirrel.x + squirrel.w/2 &&
                     it.x + it.size > squirrel.x - squirrel.w/2) {
                     
-                    // NEUE PUNKTE: 20 für Krone, 5 für Nuss
                     score += (it.type === 'krone' ? 20 : 5);
-                    scoreElement.innerText = score;
+                    scoreEl.innerText = score;
                     items.splice(i, 1);
-                    playTone(it.type === 'krone' ? 800 : 500, "sine"); // Hoher Ton für Krone
+                    playTone(it.type === 'krone' ? 800 : 500, "sine");
 
-                    // GEWONNEN PRÜFEN
-                    if (score >= winScore) {
-                        gameOver();
+                    if (score > highscore) {
+                        highscore = score;
+                        localStorage.setItem('ella_highscore', highscore);
+                        highscoreEl.innerText = highscore;
                     }
+
+                    if (score >= nextMilestone) showMilestone();
 
                 } else if (it.y > canvas.height) {
                     items.splice(i, 1);
                 }
             }
-
-            // Weniger Items spawnen (langsamerer Rhythmus)
             if (Math.random() < 0.015) spawnItem();
         }
 
         function loop() {
-            if (!gameRunning) return; // Stoppt die Schleife wenn Spiel vorbei
+            if (!gameRunning) return;
 
-            // Zeichnen
             if (imgWald.complete && imgWald.naturalWidth !== 0) {
                 ctx.drawImage(imgWald, 0, 0, canvas.width, canvas.height);
             } else {
@@ -248,15 +260,13 @@
             update();
             requestAnimationFrame(loop);
         }
-
-        // Einmaliges Zeichnen für den Startbildschirm-Hintergrund
-        function drawStaticBackground() {
+        
+        function drawStatic() {
             if (imgWald.complete) ctx.drawImage(imgWald, 0, 0, canvas.width, canvas.height);
-            requestAnimationFrame(drawStaticBackground);
+            if (!gameRunning) requestAnimationFrame(drawStatic);
         }
-        drawStaticBackground(); // Damit man den Wald hinter dem Startmenü sieht
+        drawStatic();
 
-        // Einfacher Sound
         function playTone(freq, type) {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
