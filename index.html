@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Ellas Eichhörnchen-Abenteuer</title>
+    <title>Elas Eichhörnchen-Abenteuer</title>
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; background: #87CEEB; touch-action: none; 
@@ -67,8 +67,8 @@
     </div>
 
     <div id="startScreen" class="overlay">
-        <h1>Hallo Ella!</h1>
-        <img id="startImage" src="ella.jpg" alt="Ella" onerror="this.style.display='none'">
+        <h1>Hallo Ela!</h1>
+        <img id="startImage" src="ella.jpg" alt="Ela" onerror="this.style.display='none'">
         <p>Fang die Nüsse & Dayi!</p>
         <button class="menu-btn" onclick="startGame()">Los geht's ▶</button>
     </div>
@@ -109,7 +109,7 @@
         resize();
 
         let score = 0;
-        let highscore = localStorage.getItem('ella_highscore') || 0;
+        let highscore = localStorage.getItem('ela_highscore') || 0;
         let gameRunning = false;
         let nextMilestone = 100; 
         let showHeart = false;
@@ -228,7 +228,7 @@
 
                     if (score > highscore) {
                         highscore = score;
-                        localStorage.setItem('ella_highscore', highscore);
+                        localStorage.setItem('ela_highscore', highscore);
                         highscoreEl.innerText = highscore;
                     }
                     if (score >= nextMilestone) showMilestone();
